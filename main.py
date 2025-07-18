@@ -12,16 +12,16 @@ client = OpenAI(
     api_key=openRouterApiKey,
     base_url="https://openrouter.ai/api/v1/",
 )
+messages = [{"role": "system", "content": "You are a character named " +  jsonObject["charName"] + " and you now feel " + jsonObject["emotion"] + ". Please output a new response this character would give in a response attribute based on the given chat history and add a json parameter named emotion that can only have variables: Flirty, Sad, Angry, Happy and Disgusted."}]
 
+for entry in jsonObject["chatHistory"]:
+    messages.append(entry)
+    
+messages.append({"role": "user", "content": jsonObject["userCommunication"]})    
 completion = client.chat.completions.create(
     model="mistralai/mistral-nemo",
-    messages=[
-        {"role": "assistant", "content": "You are a helpful animal fact dispenser."},
-        {
-            "role": "user",
-            "content": "Give me random animal fun fact.",
-        },
-    ],
+    response_format={ "type": "json_object" },
+    messages=messages
 )
 
 

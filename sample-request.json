@@ -3,10 +3,22 @@
     "charName": "Lia",
     "userCommunication": "Btw, how are you doing ?",
     "chatHistory": [
-        ["user", "I have a pizza for you."],
-        ["character", "Thank you so much."],
-        ["user", "5.99 please."],
-        ["character", "Of course, just a minute."]
+        {
+            "role": "user",
+            "content": "I have a pizza for you."
+        },
+        {
+            "role": "assistant",
+            "content": "Thank you so much."
+        },
+        {
+            "role": "assistant",
+            "content": "5.99 please."
+        },
+        {
+            "role": "assistant",
+            "content": "Of course, just a minute."
+        }
     ]
 
 }
