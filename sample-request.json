@@ -1,0 +1,12 @@
+{
+    "emotion": "Flirty",
+    "charName": "Lia",
+    "userCommunication": "Btw, how are you doing ?",
+    "chatHistory": [
+        ["user", "I have a pizza for you."],
+        ["character", "Thank you so much."],
+        ["user", "5.99 please."],
+        ["character", "Of course, just a minute."]
+    ]
+
+}
