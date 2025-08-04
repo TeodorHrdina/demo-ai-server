@@ -1,0 +1,7 @@
+{
+  "charName": "TestChar",
+  "emotion": "Happy",
+  "chatHistory": [{"role": "assistant", "content": "Hello!"}],
+  "userCommunication": "How are you?",
+  "stream": true
+}

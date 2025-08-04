@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -23,6 +24,38 @@ class ChatRequest(BaseModel):
     emotion: str
     chatHistory: list
     userCommunication: str
+    stream: bool = False
+
+async def generate_stream(client, messages):
+    try:
+        stream = client.chat.completions.create(
+            model="mistralai/mistral-nemo",
+            messages=messages,
+            stream=True,
+            timeout=60
+        )
+        
+        collected_content = ""
+        
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                content = chunk.choices[0].delta.content
+                collected_content += content
+                yield f"data: {json.dumps({'content': content, 'type': 'chunk'})}\n\n"
+        
+        try:
+            response_data = json.loads(collected_content)
+            if not isinstance(response_data, dict) or "response" not in response_data:
+                yield f"data: {json.dumps({'content': json.dumps({'response': 'Server was unable to get a response. Please try again or adjust your query.', 'emotion': 'Happy'}), 'type': 'final'})}\n\n"
+            else:
+                if "emotion" not in response_data or response_data["emotion"] not in ["Flirty", "Sad", "Angry", "Happy", "Disgusted"]:
+                    response_data["emotion"] = "Happy"
+                yield f"data: {json.dumps({'content': json.dumps(response_data), 'type': 'final'})}\n\n"
+        except json.JSONDecodeError:
+            yield f"data: {json.dumps({'content': json.dumps({'response': 'Server was unable to get a response. Please try again or adjust your query.', 'emotion': 'Happy'}), 'type': 'final'})}\n\n"
+            
+    except Exception as e:
+        yield f"data: {json.dumps({'content': json.dumps({'response': 'Server was unable to get a response. Please try again or adjust your query.', 'emotion': 'Happy'}), 'type': 'final'})}\n\n"
 
 @app.post("/api/chatted")
 async def chatted(request: ChatRequest):
@@ -45,14 +78,51 @@ async def chatted(request: ChatRequest):
 
     messages.append({"role": "user", "content": request.userCommunication})
 
+    if request.stream:
+        return StreamingResponse(
+            generate_stream(client, messages),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+        )
+    
     try:
         completion = client.chat.completions.create(
             model="mistralai/mistral-nemo",
             response_format={"type": "json_object"},
-            messages=messages
+            messages=messages,
+            timeout=60
         )
+        
+        response_content = completion.choices[0].message.content
+        
+        if not response_content or response_content.strip() == "":
+            return {
+                "response": "Server was unable to get a response. Please try again or adjust your query.",
+                "emotion": "Happy"
+            }
+        
+        try:
+            response_data = json.loads(response_content)
+            
+            if not isinstance(response_data, dict) or "response" not in response_data:
+                return {
+                    "response": "Server was unable to get a response. Please try again or adjust your query.",
+                    "emotion": "Happy"
+                }
+            
+            if "emotion" not in response_data or response_data["emotion"] not in ["Flirty", "Sad", "Angry", "Happy", "Disgusted"]:
+                response_data["emotion"] = "Happy"
+            
+            return response_data
+            
+        except json.JSONDecodeError:
+            return {
+                "response": "Server was unable to get a response. Please try again or adjust your query.",
+                "emotion": "Happy"
+            }
+            
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    response_data = json.loads(completion.choices[0].message.content)
-    return response_data
+        return {
+            "response": "Server was unable to get a response. Please try again or adjust your query.",
+            "emotion": "Happy"
+        }
