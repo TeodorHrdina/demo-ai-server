@@ -29,7 +29,7 @@ class ChatRequest(BaseModel):
 async def generate_stream(client, messages):
     try:
         stream = client.chat.completions.create(
-            model="mistralai/mistral-nemo",
+            model=os.getenv("CHAT_MODEL", "mistralai/mistral-nemo"),
             messages=messages,
             stream=True,
             timeout=60
@@ -69,8 +69,10 @@ async def chatted(request: ChatRequest):
         base_url="https://openrouter.ai/api/v1/",
     )
 
+    system_prompt = os.getenv("SYSTEM_PROMPT", "You are a character named {charName} and you now feel {emotion}. Please output a new response this character would give in a response attribute based on the given chat history and add a json parameter named emotion that can only have variables: Flirty, Sad, Angry, Happy and Disgusted.")
+    
     messages = [
-        {"role": "system", "content": f"You are a character named {request.charName} and you now feel {request.emotion}. Please output a new response this character would give in a response attribute based on the given chat history and add a json parameter named emotion that can only have variables: Flirty, Sad, Angry, Happy and Disgusted."}
+        {"role": "system", "content": system_prompt.format(charName=request.charName, emotion=request.emotion)}
     ]
 
     for entry in request.chatHistory:
@@ -87,7 +89,7 @@ async def chatted(request: ChatRequest):
     
     try:
         completion = client.chat.completions.create(
-            model="mistralai/mistral-nemo",
+            model=os.getenv("CHAT_MODEL", "mistralai/mistral-nemo"),
             response_format={"type": "json_object"},
             messages=messages,
             timeout=60
